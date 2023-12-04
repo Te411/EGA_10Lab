@@ -151,12 +151,14 @@ void SelectionOfParentOne(int populationSize, vector<vector<int>> population, ve
 }
 
 // Приспособленность
-void Function(int N, vector<int> priceThings, vector<int> weightThings, vector<int> individual, vector<double>& prisb) {
+double Function(int N, vector<int> priceThings, vector<int> weightThings, vector<int> individual) {
+    double prisb = 0;
     for (int i = 0; i < N; i++) {
         if (individual[i] == 1) {
-            prisb[i] = priceThings[i] / weightThings[i];
+            prisb += priceThings[i] / weightThings[i];
         }
     }
+    return prisb;
 }
 
 // выбор родительской пары (по признакам приспособленности)
@@ -167,9 +169,9 @@ void SelectionOfParentTwo(vector<int>& parentOne, vector<int>& parentTwo, int po
     int parentItemTwo = 0;
     vector<double> prices;
 
-    /*for (int i = 0; i < populationSize; i++) {
+    for (int i = 0; i < populationSize; i++) {
         prices.push_back(Function(N, priceThings, weightThings, population[i])); // исправить 
-    }*/
+    }
 
     parentItemOne = roulette(prices);
     prices.erase(prices.begin() + parentItemOne);
@@ -189,9 +191,7 @@ void CrossoverOne(int N, vector<int> parentOne, vector<int> parentTwo, vector<in
     random_device rd;
     mt19937 gen(rd());
     uniform_int_distribution<> dis(1, N - 1);
-    if (breakPointOne == 0) {
-        breakPointOne = dis(gen);
-    }
+    breakPointOne = dis(gen);
 
     for (int i = 0; i < breakPointOne; i++) {
         childrenOne[i] = parentOne[i];
@@ -244,43 +244,78 @@ void CrossoverThree(int N, vector<int> parentOne, vector<int> parentTwo, vector<
     }
 }
 
-// оператор мутации 1 (генная точечная)
-// добавить вероятность мутации
-vector<int> mutationOne(int N, vector<int> genChildren) {
+// оператор мутации 1 (генная точечная). Вероятность 10%
+void mutationOne(int N, vector<vector<int>>& population) {
     int mutation = 0;
+    double probability = 0.1;
     random_device rd;
     mt19937 gen(rd());
-    uniform_int_distribution<> dis(0, genChildren.size()-1);
-    mutation = dis(gen);
-    if (genChildren[mutation] == 0) {
-        genChildren[mutation] = 1;
+  
+    for (int i = 0; i < population.size(); i++) {
+
+        uniform_int_distribution<> dis(0.0, 1.0);
+        if (dis(gen) <= probability) {
+            uniform_int_distribution<> diss(0, population[i].size() - 1);
+            mutation = diss(gen);
+
+            if (population[i][mutation] == 0) {
+                population[i][mutation] = 1;
+            }
+            else {
+                population[i][mutation] = 0;
+            }
+        }
     }
-    else {
-        genChildren[mutation] = 0;
-    }
-    return genChildren;
 }
 
-// оператор мутации 2 (макромутация инверсией)
-// добавить вероятность мутации
-vector<int> mutationTwo(int N, vector<int> genChildren) {
+// оператор мутации 2 (макромутация инверсией). Вероятность 10%
+void mutationTwo(int N, vector<vector<int>>& population) {
     int mutationOne = 0;
     int mutationTwo = 0;
+    double probability = 0.1;
     random_device rd;
     mt19937 gen(rd());
-    uniform_int_distribution<> dis(0, genChildren.size()-2);
-    mutationOne = dis(gen);
-    uniform_int_distribution<> diss(mutationOne, genChildren.size() - 1);
-    mutationTwo = diss(gen);
-    for (int i = mutationOne; i < mutationTwo; i++) {
-        if (genChildren[i] == 0) {
-            genChildren[i] = 1;
-        }
-        else {
-            genChildren[i] = 0;
+
+    for (int i = 0; i < population.size(); i++) {
+        uniform_int_distribution<> dis(0.0, 1.0);
+        if (dis(gen) <= probability) {
+            uniform_int_distribution<> dis(0, population[i].size() - 2);
+            mutationOne = dis(gen);
+            uniform_int_distribution<> diss(mutationOne, population[i].size() - 1);
+            mutationTwo = diss(gen);
+
+            for (int j = mutationOne; j < mutationTwo; j++) {
+                if (population[i][j] == 0) {
+                    population[i][j] = 1;
+                }
+                else {
+                    population[i][j] = 0;
+                }
+            }
         }
     }
-    return genChildren;
+}
+
+// оператор мутации 3 (Хромосомная). Вероятность от 5% до 15%
+void mutationThree(int N, vector<vector<int>>& population) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dis(0.05, 0.15);
+    double probability = dis(gen);
+
+    for (int i = 0; i < population.size(); i++) {
+        uniform_int_distribution<> diss(0.0, 1.0);
+        if (diss(gen) <= probability) {
+            for (int j = 0; j < population[i].size(); j++) {
+                if (population[i][j] == 1) {
+                    population[i][j] == 0;
+                }
+                else {
+                    population[i][j] == 1;
+                }
+            }
+        }
+    }
 }
 
 // оператор селекции 1
@@ -290,12 +325,14 @@ vector<int> mutationTwo(int N, vector<int> genChildren) {
 // обработка ограничений (?)
 
 
-void Weight(int N, vector<int> weightThings, vector<int> individual, vector<double>& weight) {
+double Weight(int N, vector<int> weightThings, vector<int> individual) {
+    double weight = 0;
     for (int i = 0; i < N; i++) {
         if (individual[i] == 1) {
-            weight[i] = weightThings[i];
+            weight += weightThings[i];
         }
     }
+    return weight;
 }
 
 
@@ -361,7 +398,7 @@ int main() {
     cout << endl;
 
     cout << "Выберите оператор мутации: " << endl;
-    cout << "1. Генная точечная" << endl << "2. макромутация инверсией" << endl;
+    cout << "1. Генная точечная (10%)" << endl << "2. макромутация инверсией (10%)" << endl << "3. Хромосомная (от 5% до 15%)" << endl;
     do {
         cin >> operatorMutation;
     } while (operatorMutation != 1 && operatorMutation != 2);
@@ -399,8 +436,8 @@ int main() {
 
     for (int i = 0; i < population.size(); i++)
     {
-        Function(N, PricesThings, weightThings, population[i], prisb);
-        Weight(N, weightThings, population[i], weight);
+        prisb[i] = Function(N, PricesThings, weightThings, population[i]);
+        weight[i] = Weight(N, weightThings, population[i]);
     }
 
     for (int i = 0; i < population.size(); i++) {
@@ -436,7 +473,20 @@ int main() {
     else if (operatorSelectedParents == 2) {
         SelectionOfParentTwo(parentOne, parentTwo, populationSize, population, N,PricesThings, weightThings);
     }
+
     cout << "Родители выбраны" << endl;
+    cout << "Первый родитель: ";
+    for (int i = 0; i < parentOne.size(); i++) {
+        cout << parentOne[i] << " ";
+    }
+    cout << endl << "Второй родитель: ";
+    for (int i = 0; i < parentTwo.size(); i++) {
+        cout << parentTwo[i] << " ";
+    }
+    cout << endl;
+
+
+    vector <vector<int>> reproductPopulation; // репродуктивное множество
 
     vector<int> childOne(N);
     vector<int> childTwo(N);
@@ -450,5 +500,42 @@ int main() {
         CrossoverThree(N, parentOne, parentTwo, childOne, childTwo);
     }
     cout << "Дети выбраны" << endl;
+    cout << "Первый ребенок: ";
+    for (int i = 0; i < childOne.size(); i++) {
+        cout << childOne[i] << " ";
+    }
+    cout << endl << "Второй ребенок: ";
+    for (int i = 0; i < childTwo.size(); i++) {
+        cout << childTwo[i] << " ";
+    }
+    cout << endl;
+
+    reproductPopulation.push_back(childOne);
+    reproductPopulation.push_back(childTwo);
+
+
+    vector<vector<int>> populationCopy;
+    populationCopy = population;
+
+
+    if (operatorMutation == 1) {
+        mutationOne(N, populationCopy);
+    }
+    else if (operatorMutation == 2) {
+        mutationTwo(N, populationCopy);
+    }
+    else if (operatorMutation == 3) {
+        mutationThree(N, populationCopy);
+    }
+
+
+    for (const auto& genome : populationCopy) {
+        for (const auto& gene : genome) {
+            cout << gene << " ";
+        }
+        reproductPopulation.push_back(genome);
+        cout << endl;
+    }
+
 	return 0;
 }
